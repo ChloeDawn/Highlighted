@@ -95,10 +95,11 @@ public final class Highlighted {
     }
 
     private static void buildCube(BufferBuilder buffer, AxisAlignedBB box) {
-        int red = (ModConfig.highlightColor >> 16) & 0xFF;
-        int green = (ModConfig.highlightColor >> 8) & 0xFF;
-        int blue = ModConfig.highlightColor & 0xFF;
-        int alpha = (int) (255 * ModConfig.highlightAlpha);
+        float red = 0.01F * ModConfig.highlightRed;
+        float green = 0.01F * ModConfig.highlightGreen;
+        float blue = 0.01F * ModConfig.highlightBlue;
+        float alpha = 0.01F * ModConfig.highlightAlpha;
+
         double minX = box.minX, minY = box.minY, minZ = box.minZ;
         double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
 
@@ -136,13 +137,25 @@ public final class Highlighted {
 
     @Config(modid = ID, name = ID)
     public static final class ModConfig {
-        @Config.Name("highlight_rgb")
-        @Config.Comment("The RGB color value to use for the highlight")
-        public static int highlightColor = 0xFFFFFF;
+        @Config.Name("highlight_red")
+        @Config.Comment("The red percentage to use for the highlight")
+        @Config.RangeInt(min = 0, max = 100)
+        public static int highlightRed = 100;
+
+        @Config.Name("highlight_green")
+        @Config.Comment("The green percentage to use for the highlight")
+        @Config.RangeInt(min = 0, max = 100)
+        public static int highlightGreen = 100;
+
+        @Config.Name("highlight_blue")
+        @Config.Comment("The blue percentage to use for the highlight")
+        @Config.RangeInt(min = 0, max = 100)
+        public static int highlightBlue = 100;
 
         @Config.Name("highlight_alpha")
-        @Config.Comment("The alpha value to use for the highlight")
-        public static float highlightAlpha = 0.2F;
+        @Config.Comment("The alpha percentage to use for the highlight")
+        @Config.RangeInt(min = 0, max = 100)
+        public static int highlightAlpha = 20;
     }
 
 }

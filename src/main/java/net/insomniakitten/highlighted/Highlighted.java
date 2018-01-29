@@ -8,6 +8,10 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.client.renderer.vertex.VertexFormat;
+import net.minecraft.client.renderer.vertex.VertexFormatElement;
+import net.minecraft.client.renderer.vertex.VertexFormatElement.EnumType;
+import net.minecraft.client.renderer.vertex.VertexFormatElement.EnumUsage;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EnumFacing;
@@ -40,6 +44,11 @@ public final class Highlighted {
     public static final String ID = "highlighted";
     public static final String NAME = "Highlighted";
     public static final String VERSION = "%VERSION%";
+
+    private static final VertexFormat FORMAT = new VertexFormat()
+            .addElement(DefaultVertexFormats.POSITION_3F)
+            .addElement(DefaultVertexFormats.COLOR_4UB)
+            .addElement(new VertexFormatElement(0, EnumType.SHORT, EnumUsage.UV, 2));
 
     @SubscribeEvent
     public static void onDrawBlockHighlight(DrawBlockHighlightEvent event) {
@@ -92,7 +101,7 @@ public final class Highlighted {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
 
-        buffer.begin(ModConfig.renderMode.glMode, DefaultVertexFormats.POSITION_COLOR);
+        buffer.begin(ModConfig.renderMode.glMode, FORMAT);
         buffer.setTranslation(-offsetX, -offsetY, -offsetZ);
 
         ModConfig.renderMode.builder.accept(buffer, state, world, pos, side, boxes);
@@ -141,9 +150,12 @@ public final class Highlighted {
         double renderZ = offsetZ - mc.getRenderManager().renderPosZ;
 
         float yaw = entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks;
-        int light = entity.getBrightnessForRender() % 0x10000;
 
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light, light);
+        int light = entity.getBrightnessForRender();
+        int u = light % 65536;
+        int v = light / 65536;
+
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, u, v);
         GlStateManager.color(red, green, blue, alpha);
 
         mc.getRenderManager().setRenderOutlines(true);
@@ -157,7 +169,7 @@ public final class Highlighted {
         mc.entityRenderer.disableLightmap();
     }
 
-    private static void buildCubeLines(BufferBuilder buffer, AxisAlignedBB box) {
+    private static void buildCubeLines(BufferBuilder buffer, IBlockAccess world, BlockPos pos,  AxisAlignedBB box) {
         float red = 0.01F * ModConfig.highlightRed;
         float green = 0.01F * ModConfig.highlightGreen;
         float blue = 0.01F * ModConfig.highlightBlue;
@@ -166,27 +178,31 @@ public final class Highlighted {
         double minX = box.minX, minY = box.minY, minZ = box.minZ;
         double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
 
-        buffer.pos(minX, minY, minZ).color(red, green, blue, 0.0F).endVertex();
-        buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(minX, maxY, maxZ).color(red, green, blue, 0.0F).endVertex();
-        buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(maxX, maxY, maxZ).color(red, green, blue, 0.0F).endVertex();
-        buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(maxX, maxY, minZ).color(red, green, blue, 0.0F).endVertex();
-        buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).endVertex();
-        buffer.pos(maxX, minY, minZ).color(red, green, blue, 0.0F).endVertex();
+        int light = world.getCombinedLight(pos.up(), 0);
+        int u = light % 65536;
+        int v = light / 65536;
+
+        buffer.pos(minX, minY, minZ).color(red, green, blue, 0.0F).lightmap(u, v).endVertex();
+        buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(minX, maxY, maxZ).color(red, green, blue, 0.0F).lightmap(u, v).endVertex();
+        buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(maxX, maxY, maxZ).color(red, green, blue, 0.0F).lightmap(u, v).endVertex();
+        buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(maxX, maxY, minZ).color(red, green, blue, 0.0F).lightmap(u, v).endVertex();
+        buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+        buffer.pos(maxX, minY, minZ).color(red, green, blue, 0.0F).lightmap(u, v).endVertex();
     }
 
-    private static void buildFaceOverlay(BufferBuilder buffer, AxisAlignedBB box, EnumFacing face) {
+    private static void buildFaceOverlay(BufferBuilder buffer, IBlockAccess world, BlockPos pos, AxisAlignedBB box, EnumFacing face) {
         float red = 0.01F * ModConfig.highlightRed;
         float green = 0.01F * ModConfig.highlightGreen;
         float blue = 0.01F * ModConfig.highlightBlue;
@@ -194,43 +210,47 @@ public final class Highlighted {
 
         double minX = box.minX, minY = box.minY, minZ = box.minZ;
         double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
+
+        int light = world.getCombinedLight(pos.up(), 0);
+        int u = light % 65536;
+        int v = light / 65536;
 
         switch (face) {
             case DOWN:
-                buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
+                buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
                 break;
             case UP:
-                buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).endVertex();
+                buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
                 break;
             case NORTH:
-                buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).endVertex();
+                buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
                 break;
             case SOUTH:
-                buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).endVertex();
+                buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
                 break;
             case WEST:
-                buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
+                buffer.pos(minX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
                 break;
             case EAST:
-                buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
-                buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).endVertex();
+                buffer.pos(maxX, minY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, maxY, minZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
+                buffer.pos(maxX, minY, maxZ).color(red, green, blue, alpha).lightmap(u, v).endVertex();
                 break;
         }
     }
@@ -239,7 +259,7 @@ public final class Highlighted {
         lines(GL11.GL_LINE_STRIP, (buffer, state, world, pos, face, boxes) -> {
             GlStateManager.glLineWidth(2.0F);
             for (AxisAlignedBB box : boxes) {
-                buildCubeLines(buffer, box.grow(0.002D));
+                buildCubeLines(buffer, world, pos, box.grow(0.002D));
             }
         }),
 
@@ -247,7 +267,7 @@ public final class Highlighted {
             for (EnumFacing side : EnumFacing.VALUES) {
                 if (state.shouldSideBeRendered(world, pos, side)) {
                     for (AxisAlignedBB box : boxes) {
-                        buildFaceOverlay(buffer, box.grow(0.002D), side);
+                        buildFaceOverlay(buffer, world, pos, box.grow(0.002D), side);
                     }
                 }
             }
@@ -255,7 +275,7 @@ public final class Highlighted {
 
         overlay_face(GL11.GL_QUADS, (buffer, state, world, pos, face, boxes) -> {
             for (AxisAlignedBB box : boxes) {
-                buildFaceOverlay(buffer, box.grow(0.002D), face);
+                buildFaceOverlay(buffer, world, pos, box.grow(0.002D), face);
             }
         });
 

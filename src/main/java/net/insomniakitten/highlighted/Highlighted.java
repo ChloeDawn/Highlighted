@@ -137,22 +137,22 @@ public final class Highlighted {
 
     @Config(modid = ID, name = ID)
     public static final class ModConfig {
-        @Config.Name("highlight_red")
+        @Config.Name("red")
         @Config.Comment("The red percentage to use for the highlight")
         @Config.RangeInt(min = 0, max = 100)
         public static int highlightRed = 100;
 
-        @Config.Name("highlight_green")
+        @Config.Name("green")
         @Config.Comment("The green percentage to use for the highlight")
         @Config.RangeInt(min = 0, max = 100)
         public static int highlightGreen = 100;
 
-        @Config.Name("highlight_blue")
+        @Config.Name("blue")
         @Config.Comment("The blue percentage to use for the highlight")
         @Config.RangeInt(min = 0, max = 100)
         public static int highlightBlue = 100;
 
-        @Config.Name("highlight_alpha")
+        @Config.Name("alpha")
         @Config.Comment("The alpha percentage to use for the highlight")
         @Config.RangeInt(min = 0, max = 100)
         public static int highlightAlpha = 20;

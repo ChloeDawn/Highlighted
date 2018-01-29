@@ -53,6 +53,7 @@ public final class Highlighted {
         Minecraft mc = FMLClientHandler.instance().getClient();
         RayTraceResult result = mc.objectMouseOver;
         if (result == null) return;
+        if (mc.isGamePaused()) return;
         if (result.typeOfHit == Type.BLOCK) {
             drawBlockHighlight(mc.player, result.getBlockPos(), result.sideHit, event.getPartialTicks());
         } else if (result.typeOfHit == Type.ENTITY && ModConfig.highlightEntities) {
@@ -119,6 +120,11 @@ public final class Highlighted {
         GlStateManager.enableCull();
         GlStateManager.disableTexture2D();
         GlStateManager.depthMask(false);
+
+        GlStateManager.tryBlendFuncSeparate(
+                GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO
+        );
 
         if (entity.ticksExisted == 0) {
             entity.lastTickPosX = entity.posX;

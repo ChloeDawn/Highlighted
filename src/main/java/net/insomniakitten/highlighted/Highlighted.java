@@ -56,8 +56,7 @@ public final class Highlighted {
         IBlockState state = world.getBlockState(pos);
         List<AxisAlignedBB> boxes = new ArrayList<>();
 
-        state = state.getActualState(world, pos);
-        state.addCollisionBoxToList(world, pos, eBox, boxes, player, true);
+        state.addCollisionBoxToList(world, pos, eBox, boxes, player, false);
         if (boxes.isEmpty()) boxes.add(state.getSelectedBoundingBox(world, pos));
 
         double offsetX = player.lastTickPosX + (player.posX - player.lastTickPosX) * partialTicks;

@@ -15,6 +15,7 @@ import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.common.config.Config;
 import net.minecraftforge.fml.client.FMLClientHandler;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -44,14 +45,14 @@ public final class Highlighted {
     @SubscribeEvent
     public static void onRenderWorldLast(RenderWorldLastEvent event) {
         Minecraft mc = FMLClientHandler.instance().getClient();
-
         if (mc.objectMouseOver == null) return;
         if (mc.objectMouseOver.typeOfHit != Type.BLOCK) return;
+        renderBoxes(mc.player, mc.objectMouseOver.getBlockPos(), event.getPartialTicks());
+    }
 
-        EntityPlayer player = mc.player;
+    private static void renderBoxes(EntityPlayer player, BlockPos pos, float partialTicks) {
         AxisAlignedBB eBox = player.getEntityBoundingBox().grow(6.0D);
         World world = player.world;
-        BlockPos pos = mc.objectMouseOver.getBlockPos();
         IBlockState state = world.getBlockState(pos);
         List<AxisAlignedBB> boxes = new ArrayList<>();
 
@@ -59,9 +60,9 @@ public final class Highlighted {
         state.addCollisionBoxToList(world, pos, eBox, boxes, player, true);
         if (boxes.isEmpty()) boxes.add(state.getSelectedBoundingBox(world, pos));
 
-        double offsetX = player.lastTickPosX + (player.posX - player.lastTickPosX) * event.getPartialTicks();
-        double offsetY = player.lastTickPosY + (player.posY - player.lastTickPosY) * event.getPartialTicks();
-        double offsetZ = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * event.getPartialTicks();
+        double offsetX = player.lastTickPosX + (player.posX - player.lastTickPosX) * partialTicks;
+        double offsetY = player.lastTickPosY + (player.posY - player.lastTickPosY) * partialTicks;
+        double offsetZ = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * partialTicks;
 
         GlStateManager.disableAlpha();
         GlStateManager.enableBlend();
@@ -94,9 +95,13 @@ public final class Highlighted {
     }
 
     private static void buildCube(BufferBuilder buffer, AxisAlignedBB box) {
-        float red = 1.0F, green = 1.0F, blue = 1.0F, alpha = 0.2F;
+        int red = (ModConfig.highlightColor >> 16) & 0xFF;
+        int green = (ModConfig.highlightColor >> 8) & 0xFF;
+        int blue = ModConfig.highlightColor & 0xFF;
+        int alpha = (int) (255 * ModConfig.highlightAlpha);
         double minX = box.minX, minY = box.minY, minZ = box.minZ;
         double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
+
         buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
         buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
         buffer.pos(minX, minY, minZ).color(red, green, blue, alpha).endVertex();
@@ -127,6 +132,17 @@ public final class Highlighted {
         buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
         buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
         buffer.pos(maxX, maxY, maxZ).color(red, green, blue, alpha).endVertex();
+    }
+
+    @Config(modid = ID, name = ID)
+    public static final class ModConfig {
+        @Config.Name("highlight_rgb")
+        @Config.Comment("The RGB color value to use for the highlight")
+        public static int highlightColor = 0xFFFFFF;
+
+        @Config.Name("highlight_alpha")
+        @Config.Comment("The alpha value to use for the highlight")
+        public static float highlightAlpha = 0.2F;
     }
 
 }

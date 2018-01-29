@@ -5,8 +5,10 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -51,8 +53,11 @@ public final class Highlighted {
         Minecraft mc = FMLClientHandler.instance().getClient();
         RayTraceResult result = mc.objectMouseOver;
         if (result == null) return;
-        if (result.typeOfHit != Type.BLOCK) return;
-        renderBoxes(mc.player, result.getBlockPos(), result.sideHit, event.getPartialTicks());
+        if (result.typeOfHit == Type.BLOCK) {
+            drawBlockHighlight(mc.player, result.getBlockPos(), result.sideHit, event.getPartialTicks());
+        } else if (result.typeOfHit == Type.ENTITY && ModConfig.highlightEntities) {
+            drawEntityHighlight(result.entityHit, event.getPartialTicks());
+        }
     }
 
     @SubscribeEvent
@@ -60,7 +65,7 @@ public final class Highlighted {
         if (ID.equals(event.getModID())) ConfigManager.sync(ID, Config.Type.INSTANCE);
     }
 
-    private static void renderBoxes(EntityPlayer player, BlockPos pos, EnumFacing side, float partialTicks) {
+    private static void drawBlockHighlight(EntityPlayer player, BlockPos pos, EnumFacing side, float partialTicks) {
         World world = player.world;
         IBlockState state = world.getBlockState(pos);
         List<AxisAlignedBB> boxes = new ArrayList<>();
@@ -98,6 +103,52 @@ public final class Highlighted {
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
         GlStateManager.enableAlpha();
+    }
+
+    private static void drawEntityHighlight(Entity entity, float partialTicks) {
+        float red = 0.01F * ModConfig.highlightRed;
+        float green = 0.01F * ModConfig.highlightGreen;
+        float blue = 0.01F * ModConfig.highlightBlue;
+        float alpha = 0.01F * ModConfig.highlightAlpha;
+
+        Minecraft mc = FMLClientHandler.instance().getClient();
+
+        mc.entityRenderer.enableLightmap();
+        GlStateManager.disableAlpha();
+        GlStateManager.enableBlend();
+        GlStateManager.enableCull();
+        GlStateManager.disableTexture2D();
+        GlStateManager.depthMask(false);
+
+        if (entity.ticksExisted == 0) {
+            entity.lastTickPosX = entity.posX;
+            entity.lastTickPosY = entity.posY;
+            entity.lastTickPosZ = entity.posZ;
+        }
+
+        double offsetX = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * partialTicks;
+        double offsetY = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * partialTicks;
+        double offsetZ = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * partialTicks;
+
+        double renderX = offsetX - mc.getRenderManager().renderPosX;
+        double renderY = offsetY - mc.getRenderManager().renderPosY;
+        double renderZ = offsetZ - mc.getRenderManager().renderPosZ;
+
+        float yaw = entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks;
+        int light = entity.getBrightnessForRender() % 0x10000;
+
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light, light);
+        GlStateManager.color(red, green, blue, alpha);
+
+        mc.getRenderManager().setRenderOutlines(true);
+        mc.getRenderManager().renderEntity(entity, renderX, renderY, renderZ, yaw, partialTicks, false);
+        mc.getRenderManager().setRenderOutlines(false);
+
+        GlStateManager.depthMask(true);
+        GlStateManager.enableTexture2D();
+        GlStateManager.disableBlend();
+        GlStateManager.enableAlpha();
+        mc.entityRenderer.disableLightmap();
     }
 
     private static void buildCubeLines(BufferBuilder buffer, AxisAlignedBB box) {
@@ -240,6 +291,10 @@ public final class Highlighted {
         @Config.Name("render_mode")
         @Config.Comment("How should the highlight be rendered?")
         public static RenderMode renderMode = RenderMode.overlay_face;
+
+        @Config.Name("highlight_entities")
+        @Config.Comment("Should entities be highlighted on mouse-over?")
+        public static boolean highlightEntities = true;
     }
 
 }

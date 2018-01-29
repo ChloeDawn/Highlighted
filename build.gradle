@@ -28,6 +28,10 @@ minecraft {
     replace '%VERSION%', modVersion
 }
 
+jar {
+    manifest { attributes 'FMLAT': 'highlighted_at.cfg' }
+}
+
 processResources {
     from(sourceSets.main.resources.srcDirs) {
         include 'mcmod.info', 'pack.mcmeta'

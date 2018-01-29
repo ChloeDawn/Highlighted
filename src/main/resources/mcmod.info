@@ -1,0 +1,10 @@
+[
+    {
+        "modid": "highlighted",
+        "name": "Highlighted",
+        "description": "Replaces the vanilla selection box with a translucent highlight.",
+        "version": "${version}",
+        "mcversion": "[1.12,1.13)",
+        "authorList": [ "InsomniaKitten" ]
+    }
+]

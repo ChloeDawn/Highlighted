@@ -1,0 +1,40 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven { url 'https://files.minecraftforge.net/maven' }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle.forge'
+
+def modVersion= '0.0.1'
+def mcfVersion= '1.12.2-14.23.1.2606'
+def mcpMappings= 'snapshot_20180129'
+
+
+version = "1.12-${modVersion}"
+group = 'net.insomniakitten.highlighted'
+archivesBaseName = 'Highlighted'
+sourceCompatibility = 1.8
+
+minecraft {
+    version = mcfVersion
+    mappings = mcpMappings
+    runDir = 'run'
+    replaceIn 'Highlighted.java'
+    replace '%VERSION%', modVersion
+}
+
+processResources {
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info', 'pack.mcmeta'
+        expand 'version': modVersion
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info', 'pack.mcmeta'
+    }
+}

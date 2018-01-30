@@ -88,10 +88,6 @@ public final class Highlighted {
         GlStateManager.enablePolygonOffset();
         GlStateManager.enableCull();
 
-        GlStateManager.tryBlendFuncSeparate(
-                SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-                SourceFactor.ONE, DestFactor.ZERO);
-
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
         BlockRendererDispatcher dispatcher = mc.getBlockRendererDispatcher();
@@ -135,13 +131,16 @@ public final class Highlighted {
 
         GlStateManager.tryBlendFuncSeparate(
                 SourceFactor.ONE, DestFactor.ONE,
-                SourceFactor.ONE, DestFactor.ZERO
-        );
+                SourceFactor.ONE, DestFactor.ZERO);
 
         buffer.setTranslation(0.0D, 0.0D, 0.0D);
         tessellator.draw();
 
         mc.entityRenderer.disableLightmap();
+
+        GlStateManager.tryBlendFuncSeparate(
+                SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
+                SourceFactor.ONE, DestFactor.ZERO);
 
         GlStateManager.doPolygonOffset(0.0F, 0.0F);
         GlStateManager.disablePolygonOffset();

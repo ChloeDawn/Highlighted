@@ -58,6 +58,7 @@ public final class Highlighted {
         RayTraceResult result = mc.objectMouseOver;
         if (result == null) return;
         if (mc.isGamePaused()) return;
+        if (mc.gameSettings.hideGUI) return;
         if (result.typeOfHit == Type.BLOCK) {
             drawBlockHighlight(mc, result.getBlockPos(), event.getPartialTicks());
         } else if (result.typeOfHit == Type.ENTITY && ModConfig.highlightEntities) {

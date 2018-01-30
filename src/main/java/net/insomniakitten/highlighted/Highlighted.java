@@ -73,7 +73,7 @@ public final class Highlighted {
 
     private static void drawBlockHighlight(Minecraft mc, BlockPos pos, float partialTicks) {
         World world = mc.player.world;
-        IBlockState state = world.getBlockState(pos);
+        IBlockState state = world.getBlockState(pos).getActualState(world, pos);
 
         float red = 0.01F * ModConfig.highlightRed;
         float green = 0.01F * ModConfig.highlightGreen;
@@ -102,7 +102,7 @@ public final class Highlighted {
         BufferBuilder buffer = tessellator.getBuffer();
         BlockRendererDispatcher dispatcher = mc.getBlockRendererDispatcher();
         BlockModelRenderer renderer = dispatcher.getBlockModelRenderer();
-        IBakedModel model = dispatcher.getModelForState(state.getActualState(world, pos));
+        IBakedModel model = dispatcher.getModelForState(state);
 
         buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
         buffer.setTranslation(-offsetX, -offsetY, -offsetZ);

@@ -138,27 +138,27 @@ public final class Highlighted {
 
         float yaw = entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks;
 
-        GlStateManager.pushMatrix();
+        mc.entityRenderer.enableLightmap();
+
         GlStateManager.disableAlpha();
         GlStateManager.enableBlend();
+        GlStateManager.enableCull();
         GlStateManager.disableTexture2D();
-        GlStateManager.color(1.0F, 1.0F, 1.0F, 0.4F);
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 0.25F);
         GlStateManager.tryBlendFuncSeparate(
-                SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-                SourceFactor.ONE, DestFactor.ZERO);
-
-        mc.entityRenderer.enableLightmap();
+                GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO
+        );
 
         mc.getRenderManager().setRenderOutlines(true);
         mc.getRenderManager().renderEntity(entity, renderX, renderY, renderZ, yaw, partialTicks, false);
         mc.getRenderManager().setRenderOutlines(false);
 
-        mc.entityRenderer.disableLightmap();
-
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
         GlStateManager.enableAlpha();
-        GlStateManager.popMatrix();
+
+        mc.entityRenderer.disableLightmap();
     }
 
     @Config(modid = ID, name = ID)

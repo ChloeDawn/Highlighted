@@ -2,14 +2,12 @@ package net.insomniakitten.highlighted;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.BlockModelRenderer;
 import net.minecraft.client.renderer.BlockRendererDispatcher;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.GlStateManager.DestFactor;
 import net.minecraft.client.renderer.GlStateManager.SourceFactor;
 import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.block.model.IBakedModel;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.renderer.vertex.VertexFormat;
 import net.minecraft.client.renderer.vertex.VertexFormatElement;
@@ -20,6 +18,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraft.world.World;
+import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.config.Config;
@@ -75,56 +74,52 @@ public final class Highlighted {
         World world = mc.player.world;
         IBlockState state = world.getBlockState(pos).getActualState(world, pos);
 
-        float red = 0.01F * ModConfig.highlightRed;
-        float green = 0.01F * ModConfig.highlightGreen;
-        float blue = 0.01F * ModConfig.highlightBlue;
-        float alpha = 0.01F * ModConfig.highlightAlpha;
-
         double offsetX = mc.player.lastTickPosX + (mc.player.posX - mc.player.lastTickPosX) * partialTicks;
         double offsetY = mc.player.lastTickPosY + (mc.player.posY - mc.player.lastTickPosY) * partialTicks;
         double offsetZ = mc.player.lastTickPosZ + (mc.player.posZ - mc.player.lastTickPosZ) * partialTicks;
 
         GlStateManager.pushMatrix();
         GlStateManager.enableBlend();
-        GlStateManager.disableTexture2D();
         GlStateManager.doPolygonOffset(-1.0F, -1.0F);
         GlStateManager.enablePolygonOffset();
-
         GlStateManager.enableCull();
-        GlStateManager.color(red, green, blue, alpha);
-
         GlStateManager.tryBlendFuncSeparate(
                 SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-                SourceFactor.ONE, DestFactor.ZERO
-        );
+                SourceFactor.ONE, DestFactor.ZERO);
 
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
         BlockRendererDispatcher dispatcher = mc.getBlockRendererDispatcher();
-        BlockModelRenderer renderer = dispatcher.getBlockModelRenderer();
-        IBakedModel model = dispatcher.getModelForState(state);
+        int pass =  MinecraftForgeClient.getRenderPass();
+        int multiplier = mc.getBlockColors().colorMultiplier(state, world, pos, pass);
+
+        mc.entityRenderer.enableLightmap();
 
         buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
         buffer.setTranslation(-offsetX, -offsetY, -offsetZ);
 
-        renderer.renderModel(world, model, state, pos, buffer, true);
+        dispatcher.renderBlock(state, pos, world, buffer);
+
+        for (int v = 0; v < buffer.getVertexCount(); ++v) {
+            buffer.putColorRGBA(buffer.getColorIndex(v), 255, 255, 255);
+            float r = (1.0F / 255) * (multiplier >> 16 & 255);
+            float g = (1.0F / 255) * (multiplier >> 8 & 255);
+            float b = (1.0F / 255) * (multiplier & 255);
+            //buffer.putColorMultiplier(r, g, b, v);
+        }
 
         buffer.setTranslation(0.0D, 0.0D, 0.0D);
         tessellator.draw();
 
+        mc.entityRenderer.disableLightmap();
+
         GlStateManager.doPolygonOffset(0.0F, 0.0F);
         GlStateManager.disablePolygonOffset();
-        GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
         GlStateManager.popMatrix();
     }
 
     private static void drawEntityHighlight(Entity entity, float partialTicks) {
-        float red = 0.01F * ModConfig.highlightRed;
-        float green = 0.01F * ModConfig.highlightGreen;
-        float blue = 0.01F * ModConfig.highlightBlue;
-        float alpha = 0.01F * ModConfig.highlightAlpha;
-
         Minecraft mc = FMLClientHandler.instance().getClient();
 
         if (entity.ticksExisted == 0) {
@@ -143,40 +138,31 @@ public final class Highlighted {
 
         float yaw = entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks;
 
+        GlStateManager.pushMatrix();
+        GlStateManager.disableAlpha();
         GlStateManager.enableBlend();
         GlStateManager.disableTexture2D();
-        GlStateManager.color(red, green, blue, alpha);
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 0.4F);
+        GlStateManager.tryBlendFuncSeparate(
+                SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
+                SourceFactor.ONE, DestFactor.ZERO);
+
+        mc.entityRenderer.enableLightmap();
 
         mc.getRenderManager().setRenderOutlines(true);
         mc.getRenderManager().renderEntity(entity, renderX, renderY, renderZ, yaw, partialTicks, false);
         mc.getRenderManager().setRenderOutlines(false);
 
+        mc.entityRenderer.disableLightmap();
+
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
+        GlStateManager.enableAlpha();
+        GlStateManager.popMatrix();
     }
 
     @Config(modid = ID, name = ID)
     public static final class ModConfig {
-        @Config.Name("red")
-        @Config.Comment("The red percentage to use for the highlight")
-        @Config.RangeInt(min = 0, max = 100)
-        public static int highlightRed = 100;
-
-        @Config.Name("green")
-        @Config.Comment("The green percentage to use for the highlight")
-        @Config.RangeInt(min = 0, max = 100)
-        public static int highlightGreen = 100;
-
-        @Config.Name("blue")
-        @Config.Comment("The blue percentage to use for the highlight")
-        @Config.RangeInt(min = 0, max = 100)
-        public static int highlightBlue = 100;
-
-        @Config.Name("alpha")
-        @Config.Comment("The alpha percentage to use for the highlight")
-        @Config.RangeInt(min = 0, max = 100)
-        public static int highlightAlpha = 20;
-
         @Config.Name("highlight_entities")
         @Config.Comment("Should entities be highlighted on mouse-over?")
         public static boolean highlightEntities = true;

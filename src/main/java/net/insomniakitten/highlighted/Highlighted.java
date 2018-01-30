@@ -15,10 +15,10 @@ import net.minecraft.client.renderer.vertex.VertexFormatElement.EnumType;
 import net.minecraft.client.renderer.vertex.VertexFormatElement.EnumUsage;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraft.world.World;
-import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.config.Config;
@@ -30,6 +30,9 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.opengl.GL11;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 @SideOnly(Side.CLIENT)
 @Mod(modid = Highlighted.ID, name = Highlighted.NAME, version = Highlighted.VERSION, clientSideOnly = true)
@@ -84,6 +87,7 @@ public final class Highlighted {
         GlStateManager.doPolygonOffset(-1.0F, -1.0F);
         GlStateManager.enablePolygonOffset();
         GlStateManager.enableCull();
+
         GlStateManager.tryBlendFuncSeparate(
                 SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
                 SourceFactor.ONE, DestFactor.ZERO);
@@ -91,8 +95,6 @@ public final class Highlighted {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
         BlockRendererDispatcher dispatcher = mc.getBlockRendererDispatcher();
-        int pass =  MinecraftForgeClient.getRenderPass();
-        int multiplier = mc.getBlockColors().colorMultiplier(state, world, pos, pass);
 
         mc.entityRenderer.enableLightmap();
 
@@ -101,13 +103,40 @@ public final class Highlighted {
 
         dispatcher.renderBlock(state, pos, world, buffer);
 
-        for (int v = 0; v < buffer.getVertexCount(); ++v) {
-            buffer.putColorRGBA(buffer.getColorIndex(v), 255, 255, 255);
-            float r = (1.0F / 255) * (multiplier >> 16 & 255);
-            float g = (1.0F / 255) * (multiplier >> 8 & 255);
-            float b = (1.0F / 255) * (multiplier & 255);
-            //buffer.putColorMultiplier(r, g, b, v);
+        ByteBuffer byteBuffer = buffer.getByteBuffer();
+
+        int offset = DefaultVertexFormats.BLOCK.getColorOffset();
+        int stride = DefaultVertexFormats.BLOCK.getSize();
+        float brightness = 0.25F;
+        float[] rgba = { 1, brightness, brightness, brightness };
+        byte[] color = new byte[rgba.length];
+        int rgbaIdxOffset, rgbaIdxMultiplier;
+
+        if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
+            rgbaIdxOffset = color.length - 1;
+            rgbaIdxMultiplier = -1;
+        } else {
+            rgbaIdxOffset = 0;
+            rgbaIdxMultiplier = 1;
         }
+
+        for (int v = 0; v < buffer.getVertexCount(); v++) {
+            byteBuffer.position(v * stride + offset);
+            byteBuffer.mark();
+            byteBuffer.get(color);
+            for (int i = 0; i < color.length; i++) {
+                color[i] = (byte) MathHelper.clamp((color[i] & 0xFF) * rgba[rgbaIdxOffset + i * rgbaIdxMultiplier], 0x00, 0xFF);
+            }
+            byteBuffer.reset();
+            byteBuffer.put(color);
+        }
+
+        GlStateManager.color(1.0F, 1.0F, 1.0F);
+
+        GlStateManager.tryBlendFuncSeparate(
+                SourceFactor.ONE, DestFactor.ONE,
+                SourceFactor.ONE, DestFactor.ZERO
+        );
 
         buffer.setTranslation(0.0D, 0.0D, 0.0D);
         tessellator.draw();
